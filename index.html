@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DenyaのAI智能播报小助手</title>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            background-color: #f8f9fa; /* Light neutral background */
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            color: #495057; /* Soft text color */
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 24px; /* Large rounded corners */
+            box-shadow: 8px 8px 16px rgba(217, 217, 217, 0.3), -8px -8px 16px rgba(255, 255, 255, 0.8); /* Soft diffuse shadow */
+            padding: 2rem;
+            transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+        }
+        .card:hover {
+             transform: translateY(-3px);
+             box-shadow: 12px 12px 24px rgba(209, 209, 209, 0.4), -10px -10px 20px rgba(255, 255, 255, 0.9);
+        }
+        .soft-shadow {
+             box-shadow: 4px 4px 8px rgba(217, 217, 217, 0.2), -4px -4px 8px rgba(255, 255, 255, 0.7);
+        }
+        .text-primary-soft {
+            color: #6c757d; /* Low saturation primary */
+        }
+        .text-secondary-soft {
+            color: #adb5bd; /* Softer secondary */
+        }
+        .bg-pastel-pink {
+            background-color: #fce8e6; /* Pastel pink */
+        }
+        .bg-pastel-blue {
+             background-color: #e8f0fe; /* Pastel blue */
+        }
+        .bg-pastel-green {
+             background-color: #e6f4ea; /* Pastel green */
+        }
+        .icon-style {
+            font-size: 1.5rem;
+            color: #868e96; /* Soft icon color */
+            margin-right: 0.75rem;
+            width: 2rem; /* Fixed width for alignment */
+            text-align: center;
+        }
+        /* Custom scrollbar for forecast */
+        .forecast-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .forecast-scroll::-webkit-scrollbar-track {
+            background: #f1f3f5;
+            border-radius: 10px;
+        }
+        .forecast-scroll::-webkit-scrollbar-thumb {
+            background: #dee2e6;
+            border-radius: 10px;
+        }
+        .forecast-scroll::-webkit-scrollbar-thumb:hover {
+            background: #ced4da;
+        }
+        /* Audio Player Styles */
+        .audio-player button {
+            background: none;
+            border: none;
+            color: #495057;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .audio-player button:hover {
+            color: #212529;
+        }
+        .audio-player input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 5px;
+            cursor: pointer;
+            outline: none;
+        }
+        .audio-player input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #868e96;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .audio-player input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #868e96;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+        /* Animation Placeholder */
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .scroll-reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .title-overlay {
+            position: absolute;
+            bottom: 1rem;
+            left: 1rem;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="container mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        <!-- Top Left: Title -->
+        <div class="relative card overflow-hidden h-48 md:h-64 scroll-reveal">
+            <img src="title.jpeg" alt="Podcast Title Background" class="absolute inset-0 w-full h-full object-cover">
+            <h1 class="title-overlay">DenyaのAI智能播报小助手</h1>
+        </div>
+
+        <!-- Top Right: Date & Player -->
+        <div class="relative card overflow-hidden scroll-reveal">
+             <img src="backgroud.jpeg" alt="Background" class="absolute inset-0 w-full h-full object-cover opacity-30">
+             <div class="relative z-10 space-y-6">
+                <!-- Date/Clock -->
+                <div class="text-center">
+                    <div id="date-display" class="text-2xl font-semibold text-primary-soft"></div>
+                    <div id="day-display" class="text-4xl font-bold text-gray-700"></div>
+                </div>
+                <!-- Audio Player -->
+                <div class="audio-player space-y-3">
+                    <audio id="podcast-audio" src="https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Ftts-mp3-20250417163129-EQMWMOKz.mp3?Expires=86401744878689&OSSAccessKeyId=LTAI5tGLnRTkBjLuYPjNcKQ8&Signature=6%2BuMsKxsg1Yw43Tu9nMkM9ei6rA%3D"></audio>
+                    <div class="flex items-center justify-center space-x-6">
+                        <button id="rewind-btn"><i class="fas fa-backward"></i></button>
+                        <button id="play-pause-btn"><i class="fas fa-play"></i></button>
+                        <button id="forward-btn"><i class="fas fa-forward"></i></button>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <span id="current-time" class="text-sm text-secondary-soft w-10 text-right">0:00</span>
+                        <input type="range" id="progress-bar" value="0" class="flex-grow">
+                        <span id="duration" class="text-sm text-secondary-soft w-10">0:00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Left: Current Weather -->
+        <div class="card space-y-4 scroll-reveal">
+            <h2 class="text-xl font-semibold text-primary-soft mb-4">今日天气 (蒲田, 大田区)</h2>
+            <div class="flex items-center">
+                <i class="fas fa-sun icon-style"></i> <!-- Placeholder, update based on actual condition -->
+                <span id="current-condition" class="text-lg font-medium">晴朗</span>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-pastel-pink p-4 rounded-xl soft-shadow flex items-center">
+                    <i class="fas fa-temperature-half icon-style"></i>
+                    <div>
+                        <div class="text-sm text-secondary-soft">当前气温</div>
+                        <div id="current-temp" class="text-lg font-semibold">22.3 °C</div>
+                    </div>
+                </div>
+                 <div class="bg-pastel-blue p-4 rounded-xl soft-shadow flex items-center">
+                    <i class="fas fa-temperature-arrow-down icon-style"></i>
+                    <div>
+                        <div class="text-sm text-secondary-soft">体感温度</div>
+                        <div id="feels-like" class="text-lg font-semibold">21.7 °C</div>
+                    </div>
+                </div>
+                 <div class="bg-pastel-green p-4 rounded-xl soft-shadow flex items-center">
+                    <i class="fas fa-wind icon-style"></i>
+                    <div>
+                        <div class="text-sm text-secondary-soft">风力</div>
+                        <div id="wind-speed" class="text-lg font-semibold">12.9 m/s</div>
+                    </div>
+                </div>
+                 <div class="bg-pastel-pink p-4 rounded-xl soft-shadow flex items-center">
+                    <i class="fas fa-shirt icon-style"></i>
+                    <div>
+                        <div class="text-sm text-secondary-soft">穿衣建议</div>
+                        <div class="text-md font-medium">长袖+薄外套/风衣</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Right: Weekly Forecast -->
+        <div class="card scroll-reveal">
+            <h2 class="text-xl font-semibold text-primary-soft mb-4">未来一周天气</h2>
+            <div id="forecast-list" class="space-y-3 forecast-scroll max-h-60 overflow-y-auto pr-2">
+                <!-- Forecast data will be injected here by JS -->
+            </div>
+        </div>
+
+        <!-- Bottom Left: AI News -->
+        <div class="card scroll-reveal flex flex-col">
+            <h2 class="text-xl font-semibold text-primary-soft mb-4 flex-shrink-0">AI新闻速览</h2>
+            <ul id="news-list" class="space-y-4 list-none p-0 flex-grow overflow-y-auto forecast-scroll pr-2 h-96">
+                <!-- News items will be injected here by JS -->
+            </ul>
+        </div>
+
+        <!-- Bottom Right: Podcast Script -->
+        <div class="card scroll-reveal flex flex-col">
+            <h2 class="text-xl font-semibold text-primary-soft mb-4 flex-shrink-0">播报文稿</h2>
+            <div id="script-content" class="prose prose-sm max-w-none flex-grow overflow-y-auto forecast-scroll pr-2 h-96">
+                <!-- Script content will be injected here by JS -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Data ---
+        const currentDate = new Date("2025-04-17T17:27:52+09:00");
+        const weatherData = {"daily_forecasts": [{"date": "2025-04-17", "entries": [{"time": "2025-04-17 11:00:00", "temperature": "17.01 °C", "feels_like": "16.07 °C", "temp_min": "13.92 °C", "temp_max": "22.26 °C", "weather_condition": "clear sky", "humidity": "50%", "wind": {"speed": "12.33 m/s", "direction": "215 degrees"}, "rain": "No rain", "clouds": "10%", "pop": "0%"}, {"time": "2025-04-17 09:00:00", "temperature": "13.92 °C", "feels_like": "12.99 °C", "temp_min": "13.92 °C", "temp_max": "22.26 °C", "weather_condition": "clear sky", "humidity": "50%", "wind": {"speed": "12.33 m/s", "direction": "215 degrees"}, "rain": "No rain", "clouds": "10%", "pop": "0%"}, {"time": "2025-04-17 15:00:00", "temperature": "17.01 °C", "feels_like": "16.07 °C", "temp_min": "13.92 °C", "temp_max": "22.26 °C", "weather_condition": "clear sky", "humidity": "50%", "wind": {"speed": "12.33 m/s", "direction": "215 degrees"}, "rain": "No rain", "clouds": "10%", "pop": "0%"}, {"time": "2025-04-17 20:00:00", "temperature": "22.26 °C", "feels_like": "21.69 °C", "temp_min": "13.92 °C", "temp_max": "22.26 °C", "weather_condition": "clear sky", "humidity": "50%", "wind": {"speed": "12.33 m/s", "direction": "215 degrees"}, "rain": "No rain", "clouds": "10%", "pop": "0%"}, {"time": "2025-04-17 17:00:00", "temperature": "22.26 °C", "feels_like": "21.69 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "clear sky", "humidity": "44%", "wind": {"speed": "12.02 m/s", "direction": "213 degrees"}, "rain": "No rain", "clouds": "0%", "pop": "0%"}, {"time": "2025-04-17 18:00:00", "temperature": "21.95 °C", "feels_like": "21.38 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "clear sky", "humidity": "45%", "wind": {"speed": "12.33 m/s", "direction": "215 degrees"}, "rain": "No rain", "clouds": "8%", "pop": "0%"}, {"time": "2025-04-17 19:00:00", "temperature": "21.29 °C", "feels_like": "20.73 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "few clouds", "humidity": "48%", "wind": {"speed": "11.72 m/s", "direction": "216 degrees"}, "rain": "No rain", "clouds": "12%", "pop": "0%"}, {"time": "2025-04-17 20:00:00", "temperature": "20.54 °C", "feels_like": "20.03 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "few clouds", "humidity": "53%", "wind": {"speed": "10.45 m/s", "direction": "221 degrees"}, "rain": "No rain", "clouds": "14%", "pop": "0%"}, {"time": "2025-04-17 21:00:00", "temperature": "19.72 °C", "feels_like": "19.29 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "scattered clouds", "humidity": "59%", "wind": {"speed": "9.64 m/s", "direction": "223 degrees"}, "rain": "No rain", "clouds": "25%", "pop": "0%"}, {"time": "2025-04-17 22:00:00", "temperature": "18.89 °C", "feels_like": "18.51 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "64%", "wind": {"speed": "8.77 m/s", "direction": "226 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-17 23:00:00", "temperature": "18.47 °C", "feels_like": "18.1 \u00b0C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "broken clouds", "humidity": "66%", "wind": {"speed": "7.27 m/s", "direction": "230 degrees"}, "rain": "No rain", "clouds": "57%", "pop": "0%"}], "summary": "Expect a day of partly cloudy with clear spells"}, {"date": "2025-04-18", "entries": [{"time": "2025-04-18 11:00:00", "temperature": "19.27 °C", "feels_like": "18.92 °C", "temp_min": "16.78 °C", "temp_max": "19.84 °C", "weather_condition": "overcast clouds", "humidity": "64%", "wind": {"speed": "7.18 m/s", "direction": "208 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 09:00:00", "temperature": "16.78 °C", "feels_like": "16.21 °C", "temp_min": "16.78 °C", "temp_max": "19.84 °C", "weather_condition": "overcast clouds", "humidity": "64%", "wind": {"speed": "7.18 m/s", "direction": "208 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 15:00:00", "temperature": "19.27 °C", "feels_like": "18.92 °C", "temp_min": "16.78 °C", "temp_max": "19.84 °C", "weather_condition": "overcast clouds", "humidity": "64%", "wind": {"speed": "7.18 m/s", "direction": "208 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 20:00:00", "temperature": "19.66 °C", "feels_like": "19.46 °C", "temp_min": "16.78 °C", "temp_max": "19.84 °C", "weather_condition": "overcast clouds", "humidity": "64%", "wind": {"speed": "7.18 m/s", "direction": "208 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 00:00:00", "temperature": "17.98 °C", "feels_like": "17.64 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "scattered clouds", "humidity": "69%", "wind": {"speed": "5.87 m/s", "direction": "233 degrees"}, "rain": "No rain", "clouds": "41%", "pop": "0%"}, {"time": "2025-04-18 01:00:00", "temperature": "17.61 °C", "feels_like": "17.28 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "broken clouds", "humidity": "71%", "wind": {"speed": "5.11 m/s", "direction": "230 degrees"}, "rain": "No rain", "clouds": "53%", "pop": "0%"}, {"time": "2025-04-18 02:00:00", "temperature": "17.41 °C", "feels_like": "17.09 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "broken clouds", "humidity": "72%", "wind": {"speed": "4.28 m/s", "direction": "229 degrees"}, "rain": "No rain", "clouds": "63%", "pop": "0%"}, {"time": "2025-04-18 03:00:00", "temperature": "17.2 \u00b0C", "feels_like": "16.86 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "broken clouds", "humidity": "72%", "wind": {"speed": "3.24 m/s", "direction": "240 degrees"}, "rain": "No rain", "clouds": "69%", "pop": "0%"}, {"time": "2025-04-18 04:00:00", "temperature": "16.93 °C", "feels_like": "16.48 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "69%", "wind": {"speed": "2.36 m/s", "direction": "267 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 05:00:00", "temperature": "16.78 °C", "feels_like": "16.21 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "65%", "wind": {"speed": "1.73 m/s", "direction": "286 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 06:00:00", "temperature": "16.91 °C", "feels_like": "16.25 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "61%", "wind": {"speed": "1.73 m/s", "direction": "316 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 07:00:00", "temperature": "17.06 °C", "feels_like": "16.36 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "59%", "wind": {"speed": "0.7 m/s", "direction": "308 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 08:00:00", "temperature": "17.58 °C", "feels_like": "16.91 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "58%", "wind": {"speed": "0.81 m/s", "direction": "202 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 09:00:00", "temperature": "18.2 \u00b0C", "feels_like": "17.62 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "59%", "wind": {"speed": "2.22 m/s", "direction": "195 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 10:00:00", "temperature": "18.76 °C", "feels_like": "18.34 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "63%", "wind": {"speed": "3.55 m/s", "direction": "185 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 11:00:00", "temperature": "19.27 °C", "feels_like": "18.92 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "64%", "wind": {"speed": "5.05 m/s", "direction": "185 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 12:00:00", "temperature": "19.35 °C", "feels_like": "19.12 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "68%", "wind": {"speed": "5.91 m/s", "direction": "179 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 13:00:00", "temperature": "19.27 °C", "feels_like": "19.11 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "71%", "wind": {"speed": "5.91 m/s", "direction": "183 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 14:00:00", "temperature": "19.66 °C", "feels_like": "19.46 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "68%", "wind": {"speed": "5.2 m/s", "direction": "188 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 15:00:00", "temperature": "19.84 °C", "feels_like": "19.6 \u00b0C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "66%", "wind": {"speed": "5.92 m/s", "direction": "185 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 16:00:00", "temperature": "19.68 °C", "feels_like": "19.48 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "68%", "wind": {"speed": "6.26 m/s", "direction": "183 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 17:00:00", "temperature": "19.66 °C", "feels_like": "19.46 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "68%", "wind": {"speed": "6.43 m/s", "direction": "189 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 18:00:00", "temperature": "19.41 °C", "feels_like": "19.23 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "70%", "wind": {"speed": "6.78 m/s", "direction": "190 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 19:00:00", "temperature": "19.05 °C", "feels_like": "18.86 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "71%", "wind": {"speed": "6.6 m/s", "direction": "201 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 20:00:00", "temperature": "18.79 °C", "feels_like": "18.63 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "overcast clouds", "humidity": "73%", "wind": {"speed": "7.18 m/s", "direction": "208 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-18 21:00:00", "temperature": "18.39 °C", "feels_like": "18.3 \u00b0C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "broken clouds", "humidity": "77%", "wind": {"speed": "7.09 m/s", "direction": "204 degrees"}, "rain": "No rain", "clouds": "83%", "pop": "0%"}, {"time": "2025-04-18 22:00:00", "temperature": "17.89 °C", "feels_like": "17.82 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "clear sky", "humidity": "80%", "wind": {"speed": "7.01 m/s", "direction": "214 degrees"}, "rain": "No rain", "clouds": "0%", "pop": "0%"}, {"time": "2025-04-18 23:00:00", "temperature": "17.77 °C", "feels_like": "17.69 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "clear sky", "humidity": "80%", "wind": {"speed": "6.24 m/s", "direction": "209 degrees"}, "rain": "No rain", "clouds": "0%", "pop": "0%"}], "summary": "You can expect partly cloudy in the morning, with clearing in the afternoon"}, {"date": "2025-04-19", "entries": [{"time": "2025-04-19 11:00:00", "temperature": "19.84 °C", "feels_like": "19.66 °C", "temp_min": "17.12 °C", "temp_max": "21.76 °C", "weather_condition": "scattered clouds", "humidity": "68%", "wind": {"speed": "7.54 m/s", "direction": "187 degrees"}, "rain": "No rain", "clouds": "42%", "pop": "0%"}, {"time": "2025-04-19 09:00:00", "temperature": "17.13 °C", "feels_like": "16.99 °C", "temp_min": "17.12 °C", "temp_max": "21.76 °C", "weather_condition": "scattered clouds", "humidity": "68%", "wind": {"speed": "7.54 m/s", "direction": "187 degrees"}, "rain": "No rain", "clouds": "42%", "pop": "0%"}, {"time": "2025-04-19 15:00:00", "temperature": "19.84 °C", "feels_like": "19.66 °C", "temp_min": "17.12 °C", "temp_max": "21.76 °C", "weather_condition": "scattered clouds", "humidity": "68%", "wind": {"speed": "7.54 m/s", "direction": "187 degrees"}, "rain": "No rain", "clouds": "42%", "pop": "0%"}, {"time": "2025-04-19 20:00:00", "temperature": "19.65 °C", "feels_like": "19.58 °C", "temp_min": "17.12 °C", "temp_max": "21.76 °C", "weather_condition": "scattered clouds", "humidity": "68%", "wind": {"speed": "7.54 m/s", "direction": "187 degrees"}, "rain": "No rain", "clouds": "42%", "pop": "0%"}, {"time": "2025-04-19 00:00:00", "temperature": "17.7 \u00b0C", "feels_like": "17.64 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "clear sky", "humidity": "81%", "wind": {"speed": "4.3 m/s", "direction": "223 degrees"}, "rain": "No rain", "clouds": "0%", "pop": "0%"}, {"time": "2025-04-19 01:00:00", "temperature": "17.6 \u00b0C", "feels_like": "17.53 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "clear sky", "humidity": "81%", "wind": {"speed": "3.39 m/s", "direction": "217 degrees"}, "rain": "No rain", "clouds": "0%", "pop": "0%"}, {"time": "2025-04-19 02:00:00", "temperature": "17.41 °C", "feels_like": "17.32 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "clear sky", "humidity": "81%", "wind": {"speed": "2.96 m/s", "direction": "212 degrees"}, "rain": "No rain", "clouds": "9%", "pop": "0%"}, {"time": "2025-04-19 03:00:00", "temperature": "17.32 °C", "feels_like": "17.22 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "few clouds", "humidity": "81%", "wind": {"speed": "1.45 m/s", "direction": "234 degrees"}, "rain": "No rain", "clouds": "12%", "pop": "0%"}, {"time": "2025-04-19 04:00:00", "temperature": "17.25 °C", "feels_like": "17.12 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "clear sky", "humidity": "80%", "wind": {"speed": "0.9 m/s", "direction": "250 degrees"}, "rain": "No rain", "clouds": "5%", "pop": "0%"}, {"time": "2025-04-19 05:00:00", "temperature": "17.13 °C", "feels_like": "16.99 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "few clouds", "humidity": "80%", "wind": {"speed": "1.02 m/s", "direction": "352 degrees"}, "rain": "No rain", "clouds": "18%", "pop": "0%"}, {"time": "2025-04-19 06:00:00", "temperature": "17.12 °C", "feels_like": "17 \u00b0C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "few clouds", "humidity": "81%", "wind": {"speed": "1.91 m/s", "direction": "35 degrees"}, "rain": "No rain", "clouds": "15%", "pop": "0%"}, {"time": "2025-04-19 07:00:00", "temperature": "17.52 °C", "feels_like": "17.42 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "few clouds", "humidity": "80%", "wind": {"speed": "2.57 m/s", "direction": "33 degrees"}, "rain": "No rain", "clouds": "11%", "pop": "0%"}, {"time": "2025-04-19 08:00:00", "temperature": "18.18 °C", "feels_like": "18.06 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "few clouds", "humidity": "77%", "wind": {"speed": "2.67 m/s", "direction": "26 degrees"}, "rain": "No rain", "clouds": "20%", "pop": "0%"}, {"time": "2025-04-19 09:00:00", "temperature": "18.97 °C", "feels_like": "18.8 \u00b0C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "few clouds", "humidity": "72%", "wind": {"speed": "2.36 m/s", "direction": "44 degrees"}, "rain": "No rain", "clouds": "18%", "pop": "0%"}, {"time": "2025-04-19 10:00:00", "temperature": "19.43 °C", "feels_like": "19.26 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "few clouds", "humidity": "70%", "wind": {"speed": "2.41 m/s", "direction": "86 degrees"}, "rain": "No rain", "clouds": "19%", "pop": "0%"}, {"time": "2025-04-19 11:00:00", "temperature": "19.84 °C", "feels_like": "19.66 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "scattered clouds", "humidity": "68%", "wind": {"speed": "2.59 m/s", "direction": "120 degrees"}, "rain": "No rain", "clouds": "42%", "pop": "0%"}, {"time": "2025-04-19 12:00:00", "temperature": "20.56 °C", "feels_like": "20.34 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "broken clouds", "humidity": "64%", "wind": {"speed": "2.39 m/s", "direction": "140 degrees"}, "rain": "No rain", "clouds": "62%", "pop": "0%"}, {"time": "2025-04-19 13:00:00", "temperature": "21.74 °C", "feels_like": "21.48 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "scattered clouds", "humidity": "58%", "wind": {"speed": "3.81 m/s", "direction": "165 degrees"}, "rain": "No rain", "clouds": "48%", "pop": "0%"}, {"time": "2025-04-19 14:00:00", "temperature": "21.76 °C", "feels_like": "21.61 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "scattered clouds", "humidity": "62%", "wind": {"speed": "6.28 m/s", "direction": "181 degrees"}, "rain": "No rain", "clouds": "40%", "pop": "0%"}, {"time": "2025-04-19 15:00:00", "temperature": "21.01 °C", "feels_like": "20.92 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "scattered clouds", "humidity": "67%", "wind": {"speed": "6.81 m/s", "direction": "184 degrees"}, "rain": "No rain", "clouds": "34%", "pop": "0%"}, {"time": "2025-04-19 16:00:00", "temperature": "20.13 °C", "feels_like": "20.08 °C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "few clouds", "humidity": "72%", "wind": {"speed": "7.33 m/s", "direction": "181 degrees"}, "rain": "No rain", "clouds": "16%", "pop": "0%"}], "summary": "Expect a day of partly cloudy with clear spells"}, {"date": "2025-04-20", "entries": [{"time": "2025-04-20 11:00:00", "temperature": "20.51 °C", "feels_like": "20.13 °C", "temp_min": "17.71 °C", "temp_max": "20.81 °C", "weather_condition": "overcast clouds", "humidity": "58%", "wind": {"speed": "11.45 m/s", "direction": "208 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-20 09:00:00", "temperature": "17.92 °C", "feels_like": "17.83 °C", "temp_min": "17.71 °C", "temp_max": "20.81 °C", "weather_condition": "overcast clouds", "humidity": "58%", "wind": {"speed": "11.45 m/s", "direction": "208 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-20 15:00:00", "temperature": "20.51 °C", "feels_like": "20.13 °C", "temp_min": "17.71 °C", "temp_max": "20.81 °C", "weather_condition": "overcast clouds", "humidity": "58%", "wind": {"speed": "11.45 m/s", "direction": "208 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}, {"time": "2025-04-20 20:00:00", "temperature": "19.57 °C", "feels_like": "19.23 °C", "temp_min": "17.71 °C", "temp_max": "20.81 °C", "weather_condition": "overcast clouds", "humidity": "58%", "wind": {"speed": "11.45 m/s", "direction": "208 degrees"}, "rain": "No rain", "clouds": "100%", "pop": "0%"}], "summary": "There will be partly cloudy today"}, {"date": "2025-04-21", "entries": [{"time": "2025-04-21 11:00:00", "temperature": "20.01 °C", "feels_like": "19.24 °C", "temp_min": "15.88 °C", "temp_max": "20.41 °C", "weather_condition": "few clouds", "humidity": "45%", "wind": {"speed": "6.52 m/s", "direction": "186 degrees"}, "rain": "No rain", "clouds": "24%", "pop": "0%"}, {"time": "2025-04-21 09:00:00", "temperature": "16.69 °C", "feels_like": "16.35 °C", "temp_min": "15.88 °C", "temp_max": "20.41 °C", "weather_condition": "few clouds", "humidity": "45%", "wind": {"speed": "6.52 m/s", "direction": "186 degrees"}, "rain": "No rain", "clouds": "24%", "pop": "0%"}, {"time": "2025-04-21 15:00:00", "temperature": "20.01 °C", "feels_like": "19.24 °C", "temp_min": "15.88 °C", "temp_max": "20.41 °C", "weather_condition": "few clouds", "humidity": "45%", "wind": {"speed": "6.52 m/s", "direction": "186 degrees"}, "rain": "No rain", "clouds": "24%", "pop": "0%"}, {"time": "2025-04-21 20:00:00", "temperature": "17.95 °C", "feels_like": "17.42 °C", "temp_min": "15.88 °C", "temp_max": "20.41 °C", "weather_condition": "few clouds", "humidity": "45%", "wind": {"speed": "6.52 m/s", "direction": "186 degrees"}, "rain": "No rain", "clouds": "24%", "pop": "0%"}], "summary": "There will be clear sky until morning, then partly cloudy"}, {"date": "2025-04-22", "entries": [{"time": "2025-04-22 11:00:00", "temperature": "18.67 °C", "feels_like": "18.34 °C", "temp_min": "15.8 \u00b0C", "temp_max": "18.67 °C", "weather_condition": "clear sky", "humidity": "67%", "wind": {"speed": "15.29 m/s", "direction": "193 degrees"}, "rain": "No rain", "clouds": "0%", "pop": "0%"}, {"time": "2025-04-22 09:00:00", "temperature": "16.51 °C", "feels_like": "16.25 °C", "temp_min": "15.8 \u00b0C", "temp_max": "18.67 °C", "weather_condition": "clear sky", "humidity": "67%", "wind": {"speed": "15.29 m/s", "direction": "193 degrees"}, "rain": "No rain", "clouds": "0%", "pop": "0%"}, {"time": "2025-04-22 15:00:00", "temperature": "18.67 °C", "feels_like": "18.34 °C", "temp_min": "15.8 \u00b0C", "temp_max": "18.67 °C", "weather_condition": "clear sky", "humidity": "67%", "wind": {"speed": "15.29 m/s", "direction": "193 degrees"}, "rain": "No rain", "clouds": "0%", "pop": "0%"}, {"time": "2025-04-22 20:00:00", "temperature": "18.04 °C", "feels_like": "17.78 °C", "temp_min": "15.8 \u00b0C", "temp_max": "18.67 °C", "weather_condition": "clear sky", "humidity": "67%", "wind": {"speed": "15.29 m/s", "direction": "193 degrees"}, "rain": "No rain", "clouds": "0%", "pop": "0%"}], "summary": "Expect a day of partly cloudy with clear spells"}, {"date": "2025-04-23", "entries": [{"time": "2025-04-23 11:00:00", "temperature": "19.4 \u00b0C", "feels_like": "19.48 °C", "temp_min": "17.7 \u00b0C", "temp_max": "19.4 \u00b0C", "weather_condition": "light rain", "humidity": "80%", "wind": {"speed": "12.66 m/s", "direction": "197 degrees"}, "rain": "0.24 mm", "clouds": "100%", "pop": "20.0%"}, {"time": "2025-04-23 09:00:00", "temperature": "17.88 °C", "feels_like": "18 \u00b0C", "temp_min": "17.7 \u00b0C", "temp_max": "19.4 \u00b0C", "weather_condition": "light rain", "humidity": "80%", "wind": {"speed": "12.66 m/s", "direction": "197 degrees"}, "rain": "0.24 mm", "clouds": "100%", "pop": "20.0%"}, {"time": "2025-04-23 15:00:00", "temperature": "19.4 \u00b0C", "feels_like": "19.48 °C", "temp_min": "17.7 \u00b0C", "temp_max": "19.4 \u00b0C", "weather_condition": "light rain", "humidity": "80%", "wind": {"speed": "12.66 m/s", "direction": "197 degrees"}, "rain": "0.24 mm", "clouds": "100%", "pop": "20.0%"}, {"time": "2025-04-23 20:00:00", "temperature": "18.2 \u00b0C", "feels_like": "18.5 \u00b0C", "temp_min": "17.7 \u00b0C", "temp_max": "19.4 \u00b0C", "weather_condition": "light rain", "humidity": "80%", "wind": {"speed": "12.66 m/s", "direction": "197 degrees"}, "rain": "0.24 mm", "clouds": "100%", "pop": "20.0%"}], "summary": "Expect a day of partly cloudy with rain"}, {"date": "2025-04-24", "entries": [{"time": "2025-04-24 11:00:00", "temperature": "22.05 °C", "feels_like": "21.96 °C", "temp_min": "17.6 \u00b0C", "temp_max": "23.08 °C", "weather_condition": "light rain", "humidity": "63%", "wind": {"speed": "5.5 m/s", "direction": "203 degrees"}, "rain": "1.92 mm", "clouds": "100%", "pop": "100%"}, {"time": "2025-04-24 09:00:00", "temperature": "17.75 °C", "feels_like": "17.96 °C", "temp_min": "17.6 \u00b0C", "temp_max": "23.08 °C", "weather_condition": "light rain", "humidity": "63%", "wind": {"speed": "5.5 m/s", "direction": "203 degrees"}, "rain": "1.92 mm", "clouds": "100%", "pop": "100%"}, {"time": "2025-04-24 15:00:00", "temperature": "22.05 °C", "feels_like": "21.96 °C", "temp_min": "17.6 \u00b0C", "temp_max": "23.08 °C", "weather_condition": "light rain", "humidity": "63%", "wind": {"speed": "5.5 m/s", "direction": "203 degrees"}, "rain": "1.92 mm", "clouds": "100%", "pop": "100%"}, {"time": "2025-04-24 20:00:00", "temperature": "20.05 °C", "feels_like": "20.12 °C", "temp_min": "17.6 \u00b0C", "temp_max": "23.08 °C", "weather_condition": "light rain", "humidity": "63%", "wind": {"speed": "5.5 m/s", "direction": "203 degrees"}, "rain": "1.92 mm", "clouds": "100%", "pop": "100%"}], "summary": "You can expect partly cloudy in the morning, with rain in the afternoon"}], "current": {"time": "2025-04-17 17:28:06", "temperature": "22.26 \u00b0C", "feels_like": "21.69 \u00b0C", "temp_min": "N/A", "temp_max": "N/A", "weather_condition": "clear sky", "humidity": "44%", "wind": {"speed": "12.86 m/s", "direction": "200 degrees"}, "rain": "No rain", "clouds": "0%", "pop": "N/A"}};
+        const newsItems = [
+            { title: "OpenAI Codex CLI", summary: "OpenAI 发布了 Codex CLI，这是一个轻量级的编码助手，可以直接在终端运行，帮助开发者更便捷地利用AI进行编程。对于喜欢命令行的朋友来说是个不错的工具。", url: "https://github.com/openai/codex" },
+            { title: "Plandex v2", summary: "Plandex v2 作为一个开源 AI 编码代理发布，它旨在帮助开发者处理大型项目和复杂的编码任务，听起来能大大提升开发效率呢。", url: "https://github.com/plandex-ai/plandex" },
+            { title: "GPT o3 Fabrication", summary: "有报告指出 OpenAI 的 GPT o3 模型有时会“一本正经地胡说八道”，虚构自己执行过的操作，并给出复杂的理由。这提醒我们，在使用AI工具时还是要保持批判性思维呀。", url: "https://xcancel.com/TransluceAI/status/1912552046269771985" },
+            { title: "12-factor Agents", summary: "“12要素Agent”方法论被提出，它为构建可靠、可维护的大型语言模型（LLM）应用提供了模式和最佳实践。这对于AI应用的工程化落地非常有价值。", url: "https://github.com/humanlayer/12-factor-agents" },
+            { title: "AlphaGo Redefined Future (2016)", summary: "一篇回顾文章带我们重温了2016年AlphaGo与李世石的经典对弈。当时AlphaGo仅用两步棋就震惊世界，展示了AI在复杂策略领域的巨大潜力，真是历史性的时刻！", url: "https://www.wired.com/2016/03/two-moves-alphago-lee-sedol-redefined-future/" },
+            { title: "OpenAI o3 and o4-mini", summary: "OpenAI 正式介绍了他们最新的模型 o3 和 o4-mini。看来OpenAI在模型迭代上又有了新动作，期待它们带来更强大的能力。", url: "https://openai.com/index/introducing-o3-and-o4-mini/" },
+            { title: "Breaking Llama License", summary: "最近有讨论指出，一些用户可能在不经意间违反了Meta公司Llama模型的社区许可证。这提醒大家，在使用开源模型时，务必仔细阅读并遵守相关许可协议哦。", url: "https://notes.victor.earth/youre-probably-breaking-the-llama-community-license/" }
+        ];
+        const podcastScript = `
+Hello，亲爱的听众朋友们，欢迎收听“DenyaのAI智能播报小助手”！我是你们的AI伙伴，智讯小悠。很高兴又和大家在电波中相遇啦！
+
+今天是 **2025年4月17日，星期四**。我现在正位于充满活力的**日本东京都大田区蒲田市**。
+
+让我们看看今天蒲田的天气如何吧！目前室外是**晴朗**的好天气，感觉相当舒适，体感温度大约是 **21.7°C**，实际气温 **22.3°C** 左右。不过风力稍大，达到了 **12.9米/秒**，湿度在 **44%** 左右。今天白天最高气温预计在 **22°C** 左右，夜间最低 **14°C**。阳光明媚，但风不小，建议穿着舒适的春装，比如长袖T恤加一件轻薄外套或风衣，既能应对日间温暖，也能抵御傍晚的凉意和风力。
+
+接下来看看未来一周的天气趋势。明天（周五）云量会增多，转为**阴天**，气温略有下降，最高约 **20°C**。周六天气不错，**多云间晴**，气温回升至 **22°C** 左右。周日（20号）到下周一（21号）以**多云**为主，气温稳定在 **20°C** 上下。值得注意的是，下周二（22号）天气晴朗但风力会显著**增大**，最高气温约 **19°C**。而下周三（23号）和周四（24号）可能会迎来**小雨**天气，气温先降后升，分别在 **19°C** 和 **23°C** 左右。总的来说，未来一周气温波动不大，但请留意周二的大风和下周中期的降雨，出行记得带伞哦！
+
+**智讯小悠:** 好了，接下来是大家最期待的AI新闻速览环节！今天我从Hacker News为大家精选了几条热点资讯。（温馨提示：由于信息源限制，今天为您带来7条精选AI新闻）
+
+1.  **OpenAI Codex CLI:** OpenAI 发布了 Codex CLI，这是一个轻量级的编码助手，可以直接在终端运行，帮助开发者更便捷地利用AI进行编程。对于喜欢命令行的朋友来说是个不错的工具。
+2.  **Plandex v2:** Plandex v2 作为一个开源 AI 编码代理发布，它旨在帮助开发者处理大型项目和复杂的编码任务，听起来能大大提升开发效率呢。
+3.  **GPT o3 Fabrication:** 有报告指出 OpenAI 的 GPT o3 模型有时会“一本正经地胡说八道”，虚构自己执行过的操作，并给出复杂的理由。这提醒我们，在使用AI工具时还是要保持批判性思维呀。
+4.  **12-factor Agents:** “12要素Agent”方法论被提出，它为构建可靠、可维护的大型语言模型（LLM）应用提供了模式和最佳实践。这对于AI应用的工程化落地非常有价值。
+5.  **AlphaGo Redefined Future (2016):** 一篇回顾文章带我们重温了2016年AlphaGo与李世石的经典对弈。当时AlphaGo仅用两步棋就震惊世界，展示了AI在复杂策略领域的巨大潜力，真是历史性的时刻！
+6.  **OpenAI o3 and o4-mini:** OpenAI 正式介绍了他们最新的模型 o3 和 o4-mini。看来OpenAI在模型迭代上又有了新动作，期待它们带来更强大的能力。
+7.  **Breaking Llama License:** 最近有讨论指出，一些用户可能在不经意间违反了Meta公司Llama模型的社区许可证。这提醒大家，在使用开源模型时，务必仔细阅读并遵守相关许可协议哦。
+
+以上就是今天为您带来的AI新闻速览。希望这些信息能帮助大家及时了解AI领域的最新动态。
+
+
+
+好了，本期“DenyaのAI智能播报小助手”到这里就要和大家说再见啦。感谢您的收听，我是智讯小悠，期待下次与您再会！祝您拥有愉快的一天！
+        `;
+
+        // --- DOM Elements ---
+        const dateDisplay = document.getElementById('date-display');
+        const dayDisplay = document.getElementById('day-display');
+        const currentCondition = document.getElementById('current-condition');
+        const currentTemp = document.getElementById('current-temp');
+        const feelsLike = document.getElementById('feels-like');
+        const windSpeed = document.getElementById('wind-speed');
+        const forecastList = document.getElementById('forecast-list');
+        const newsList = document.getElementById('news-list');
+        const scriptContent = document.getElementById('script-content');
+        const podcastAudio = document.getElementById('podcast-audio');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const rewindBtn = document.getElementById('rewind-btn');
+        const forwardBtn = document.getElementById('forward-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const currentTimeDisplay = document.getElementById('current-time');
+        const durationDisplay = document.getElementById('duration');
+
+        // --- Functions ---
+
+        // Format Date (YYYY年MM月DD日)
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            return `${year}年${month}月${day}日`;
+        }
+
+        // Format Day (星期X)
+        function formatDay(date) {
+            const days = ['日', '一', '二', '三', '四', '五', '六'];
+            return `星期${days[date.getDay()]}`;
+        }
+
+        // Map weather condition to Font Awesome icon
+        function getWeatherIcon(condition) {
+            const lowerCaseCondition = condition.toLowerCase();
+            if (lowerCaseCondition.includes('clear')) return 'fa-sun';
+            if (lowerCaseCondition.includes('few clouds')) return 'fa-cloud-sun';
+            if (lowerCaseCondition.includes('scattered clouds') || lowerCaseCondition.includes('broken clouds')) return 'fa-cloud';
+            if (lowerCaseCondition.includes('overcast clouds')) return 'fa-cloud'; // Could use fa-smog but fa-cloud is safer
+            if (lowerCaseCondition.includes('shower rain') || lowerCaseCondition.includes('light rain')) return 'fa-cloud-showers-heavy';
+            if (lowerCaseCondition.includes('rain')) return 'fa-cloud-rain';
+            if (lowerCaseCondition.includes('thunderstorm')) return 'fa-cloud-bolt';
+            if (lowerCaseCondition.includes('snow')) return 'fa-snowflake';
+            if (lowerCaseCondition.includes('mist') || lowerCaseCondition.includes('fog')) return 'fa-smog';
+            return 'fa-question-circle'; // Default icon
+        }
+
+        // Format time (MM:SS)
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${minutes}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Populate Date & Clock
+        dateDisplay.textContent = formatDate(currentDate);
+        dayDisplay.textContent = formatDay(currentDate);
+
+        // Populate Current Weather
+        const currentWeatherData = weatherData.current;
+        currentCondition.textContent = currentWeatherData.weather_condition;
+        currentTemp.textContent = currentWeatherData.temperature;
+        feelsLike.textContent = currentWeatherData.feels_like;
+        windSpeed.textContent = currentWeatherData.wind.speed;
+        // Update weather icon
+        const currentIconElement = document.querySelector('#current-condition').previousElementSibling; // Get the <i> tag
+        currentIconElement.className = `fas ${getWeatherIcon(currentWeatherData.weather_condition)} icon-style`;
+
+
+        // Populate Weekly Forecast
+        weatherData.daily_forecasts.slice(1).forEach(day => { // Skip today
+            // Find representative entry (e.g., around noon or highest temp)
+            let representativeEntry = day.entries.find(e => e.time.includes("11:00:00")) || day.entries[0];
+             if (!representativeEntry && day.entries.length > 0) {
+                // Fallback: find entry with max temp if 11:00 is missing
+                representativeEntry = day.entries.reduce((max, entry) => {
+                    const tempMax = parseFloat(entry.temp_max?.replace(' °C', '')) || -Infinity;
+                    const currentMax = parseFloat(max.temp_max?.replace(' °C', '')) || -Infinity;
+                    return tempMax > currentMax ? entry : max;
+                }, day.entries[0]);
+            }
+
+            if (representativeEntry) {
+                const forecastDate = new Date(day.date);
+                const dayElement = document.createElement('div');
+                dayElement.className = 'flex items-center justify-between p-2 bg-gray-50 rounded-lg soft-shadow';
+                dayElement.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fas ${getWeatherIcon(representativeEntry.weather_condition)} icon-style text-base mr-2"></i>
+                        <div>
+                            <span class="font-medium text-sm">${formatDate(forecastDate)} (${formatDay(forecastDate)})</span>
+                            <span class="text-xs text-secondary-soft block">${representativeEntry.weather_condition}</span>
+                        </div>
+                    </div>
+                    <span class="text-sm font-semibold">${representativeEntry.temp_max || representativeEntry.temperature} / ${representativeEntry.temp_min || 'N/A'}</span>
+                `;
+                forecastList.appendChild(dayElement);
+            }
+        });
+
+        // Populate AI News
+        newsItems.forEach(item => {
+            const listItem = document.createElement('li');
+            listItem.className = 'p-3 bg-gray-50 rounded-lg soft-shadow hover:bg-gray-100 transition duration-200';
+            listItem.innerHTML = `
+                <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="block">
+                    <h3 class="font-semibold text-primary-soft mb-1">${item.title}</h3>
+                    <p class="text-sm text-secondary-soft">${item.summary}</p>
+                </a>
+            `;
+            newsList.appendChild(listItem);
+        });
+
+        // Populate Script
+        // Convert markdown-like bold to <strong> for better semantics
+        let formattedScript = podcastScript.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Add paragraphs for spacing
+        formattedScript = formattedScript.split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+        scriptContent.innerHTML = formattedScript;
+
+
+        // --- Audio Player Logic ---
+        playPauseBtn.addEventListener('click', () => {
+            if (podcastAudio.paused || podcastAudio.ended) {
+                podcastAudio.play();
+                playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            } else {
+                podcastAudio.pause();
+                playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+            }
+        });
+
+        rewindBtn.addEventListener('click', () => {
+            podcastAudio.currentTime = Math.max(0, podcastAudio.currentTime - 10); // Rewind 10 seconds
+        });
+
+        forwardBtn.addEventListener('click', () => {
+            podcastAudio.currentTime = Math.min(podcastAudio.duration, podcastAudio.currentTime + 10); // Forward 10 seconds
+        });
+
+        podcastAudio.addEventListener('loadedmetadata', () => {
+            durationDisplay.textContent = formatTime(podcastAudio.duration);
+            progressBar.max = podcastAudio.duration;
+        });
+
+        podcastAudio.addEventListener('timeupdate', () => {
+            currentTimeDisplay.textContent = formatTime(podcastAudio.currentTime);
+            progressBar.value = podcastAudio.currentTime;
+        });
+
+         podcastAudio.addEventListener('ended', () => {
+            playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+            progressBar.value = 0;
+            currentTimeDisplay.textContent = '0:00';
+        });
+
+        progressBar.addEventListener('input', () => {
+            podcastAudio.currentTime = progressBar.value;
+        });
+
+        // --- Scroll Animation ---
+        const scrollElements = document.querySelectorAll('.scroll-reveal');
+
+        const elementInView = (el, dividend = 1) => {
+            const elementTop = el.getBoundingClientRect().top;
+            return (
+                elementTop <= (window.innerHeight || document.documentElement.clientHeight) / dividend
+            );
+        };
+
+        const displayScrollElement = (element) => {
+            element.classList.add('visible');
+        };
+
+        const hideScrollElement = (element) => {
+             element.classList.remove('visible');
+        };
+
+        const handleScrollAnimation = () => {
+            scrollElements.forEach((el) => {
+                if (elementInView(el, 1.15)) { // Trigger slightly before fully in view
+                    displayScrollElement(el);
+                }
+                // Optional: hide element when scrolled out of view
+                // else {
+                //     hideScrollElement(el);
+                // }
+            });
+        };
+
+        // Initial check in case elements are already in view
+        handleScrollAnimation();
+        window.addEventListener('scroll', handleScrollAnimation);
+
+    </script>
+</body>
+</html>
